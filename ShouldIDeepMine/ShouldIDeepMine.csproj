@@ -1,0 +1,16 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <Version>0.1.0.0</Version>
+    <Author>JustPixelll</Author>
+    <Name>Should I Deep Mine?</Name>
+    <Punchline>Experimental native Market Board data miner for Should I?</Punchline>
+    <Description>Experimental companion for Should I?. Runs user-started queued native Market Board deep scans over explicit scopes and publishes snapshots to Should I? through Dalamud IPC.</Description>
+    <PackageProjectUrl>https://github.com/JustPixelll/ShouldIDeepMine</PackageProjectUrl>
+    <RepoUrl>https://github.com/JustPixelll/ShouldIDeepMine</RepoUrl>
+    <Tags>market;market board;experimental;scanner;data;should i</Tags>
+    <CategoryTags>utility</CategoryTags>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>
