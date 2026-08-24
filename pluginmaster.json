@@ -1,0 +1,17 @@
+[
+  {
+    "Author": "JustPixelll",
+    "Name": "Should I Deep Mine?",
+    "InternalName": "ShouldIDeepMine",
+    "AssemblyVersion": "0.1.0.0",
+    "Description": "Experimental native Market Board data miner and companion for Should I?.",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "Punchline": "Experimental deep data mining for Should I?.",
+    "RepoUrl": "https://github.com/JustPixelll/ShouldIDeepMine",
+    "DownloadLinkInstall": "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip",
+    "IsHide": false,
+    "IsTestingExclusive": false
+  }
+]
