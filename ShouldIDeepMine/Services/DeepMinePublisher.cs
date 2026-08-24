@@ -7,8 +7,8 @@ namespace ShouldIDeepMine.Services;
 
 public sealed class DeepMinePublisher : IDisposable
 {
-    public const string SnapshotUpdatedChannel = "ShouldIDeepMine.SnapshotUpdated.v1";
-    public const string GetSnapshotsChannel = "ShouldIDeepMine.GetSnapshots.v1";
+    public const string SnapshotUpdatedChannel = "ShouldI.ExternalMarketData.SnapshotUpdated.v1";
+    public const string GetSnapshotsChannel = "ShouldI.ExternalMarketData.GetSnapshots.v1";
 
     private readonly string path;
     private readonly IPluginLog log;

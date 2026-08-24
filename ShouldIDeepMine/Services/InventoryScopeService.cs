@@ -9,8 +9,8 @@ namespace ShouldIDeepMine.Services;
 
 public sealed unsafe class InventoryScopeService
 {
-    public const string ShouldIOwnedIdsChannel = "ShouldI.GetOwnedMarketableItemIds.v1";
-    public const string ShouldIListingIdsChannel = "ShouldI.GetCurrentListingItemIds.v1";
+    public const string ShouldIOwnedIdsChannel = "ShouldI.ExternalMarketData.GetOwnedMarketableItemIds.v1";
+    public const string ShouldIListingIdsChannel = "ShouldI.ExternalMarketData.GetCurrentListingItemIds.v1";
 
     private static readonly InventoryType[] PlayerInventory =
     [
