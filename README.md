@@ -32,6 +32,12 @@ Should I? may expose:
 
 The shared contract intentionally uses JSON/primitive IPC types so the two repositories do not need a shared binary dependency.
 
+## Build
+
+With Dalamud development files installed in the normal XIVLauncher development path:
+
+`dotnet build ./ShouldIDeepMine/ShouldIDeepMine.csproj --configuration Release`
+
 ## Distribution
 
 This project is intentionally experimental/custom-repository territory. Keep it separate from the official Should I? submission and review its behavior independently.
