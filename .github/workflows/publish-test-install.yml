@@ -59,8 +59,18 @@ jobs:
           $manifest[0].AssemblyVersion = "0.1.0.0"
           $manifest[0].DownloadLinkInstall = "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip"
           $manifest[0].DownloadLinkUpdate = "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip"
-          $manifest[0].LastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
-          $manifest[0].Changelog = "v0.1.0 experimental test-install: explicit deep-scan scopes, queue controls, local cache, and Should I? IPC integration."
+          $lastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+          $changelog = "v0.1.0 experimental test-install: explicit deep-scan scopes, queue controls, local cache, and Should I? IPC integration."
+          if ($manifest[0].PSObject.Properties.Name -contains "LastUpdate") {
+            $manifest[0].LastUpdate = $lastUpdate
+          } else {
+            $manifest[0] | Add-Member -NotePropertyName LastUpdate -NotePropertyValue $lastUpdate
+          }
+          if ($manifest[0].PSObject.Properties.Name -contains "Changelog") {
+            $manifest[0].Changelog = $changelog
+          } else {
+            $manifest[0] | Add-Member -NotePropertyName Changelog -NotePropertyValue $changelog
+          }
           ConvertTo-Json -InputObject $manifest -Depth 10 | Set-Content ".\pluginmaster.json" -Encoding UTF8
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
