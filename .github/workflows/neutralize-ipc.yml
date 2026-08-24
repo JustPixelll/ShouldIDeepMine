@@ -1,0 +1,44 @@
+name: Switch to neutral IPC contract
+
+on:
+  push:
+    branches: [ feature/neutral-ipc-protocol ]
+    paths: [ .github/workflows/neutralize-ipc.yml ]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Update IPC contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          replacements = {
+              'ShouldIDeepMine.SnapshotUpdated.v1': 'ShouldI.ExternalMarketData.SnapshotUpdated.v1',
+              'ShouldIDeepMine.GetSnapshots.v1': 'ShouldI.ExternalMarketData.GetSnapshots.v1',
+              'ShouldI.GetOwnedMarketableItemIds.v1': 'ShouldI.ExternalMarketData.GetOwnedMarketableItemIds.v1',
+              'ShouldI.GetCurrentListingItemIds.v1': 'ShouldI.ExternalMarketData.GetCurrentListingItemIds.v1',
+          }
+          for p in Path('.').rglob('*'):
+              if not p.is_file() or '.git' in p.parts: continue
+              try: s = p.read_text()
+              except Exception: continue
+              new = s
+              for a,b in replacements.items(): new = new.replace(a,b)
+              if new != s: p.write_text(new)
+
+          p = Path('ShouldIDeepMine/ShouldIDeepMine.csproj')
+          s = p.read_text().replace('<Version>0.2.0.0</Version>', '<Version>0.2.1.0</Version>')
+          p.write_text(s)
+          Path('.github/workflows/neutralize-ipc.yml').unlink()
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Use neutral external market data IPC contract"
+          git push origin feature/neutral-ipc-protocol
