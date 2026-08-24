@@ -12,6 +12,8 @@
     "DownloadLinkInstall": "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip",
     "DownloadLinkUpdate": "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip",
     "IsHide": false,
-    "IsTestingExclusive": false
+    "IsTestingExclusive": false,
+    "LastUpdate": "1787594653",
+    "Changelog": "v0.1.0 experimental test-install: explicit deep-scan scopes, queue controls, local cache, and Should I? IPC integration."
   }
 ]
