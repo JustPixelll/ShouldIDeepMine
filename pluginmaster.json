@@ -3,17 +3,18 @@
     "Author": "JustPixelll",
     "Name": "Should I Deep Mine?",
     "InternalName": "ShouldIDeepMine",
-    "AssemblyVersion": "0.1.0.0",
-    "Description": "Experimental native Market Board data miner and companion for Should I?.",
+    "AssemblyVersion": "0.2.0.0",
+    "Description": "Experimental companion for Should I?. Run user-started, explicitly scoped native Market Board deep scans, keep a local snapshot cache, and publish fresh market snapshots to Should I? through Dalamud IPC. Nothing scans automatically when the plugin loads.",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
-    "Punchline": "Experimental deep data mining for Should I?.",
+    "Punchline": "Explicit deep Market Board scans for Should I?",
     "RepoUrl": "https://github.com/JustPixelll/ShouldIDeepMine",
+    "IconUrl": "https://raw.githubusercontent.com/JustPixelll/ShouldIDeepMine/main/images/icon.png",
     "DownloadLinkInstall": "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip",
     "DownloadLinkUpdate": "https://github.com/JustPixelll/ShouldIDeepMine/releases/download/v0.1.0/latest.zip",
     "IsHide": false,
     "IsTestingExclusive": false,
     "LastUpdate": "1787594653",
-    "Changelog": "v0.1.0 experimental test-install: explicit deep-scan scopes, queue controls, local cache, and Should I? IPC integration."
+    "Changelog": "v0.2.0 preparation: chat-command scan scopes, polished repository information, and launcher icon/metadata."
   }
 ]
