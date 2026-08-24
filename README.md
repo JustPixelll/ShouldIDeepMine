@@ -109,13 +109,13 @@ The two plugins communicate through a deliberately tiny, versioned IPC contract 
 
 Deep Mine publishes:
 
-- `ShouldIDeepMine.SnapshotUpdated.v1` — completed snapshot JSON
-- `ShouldIDeepMine.GetSnapshots.v1` — cached snapshot JSON collection
+- `ShouldI.ExternalMarketData.SnapshotUpdated.v1` — completed snapshot JSON
+- `ShouldI.ExternalMarketData.GetSnapshots.v1` — cached snapshot JSON collection
 
 Should I? exposes safe scope helpers:
 
-- `ShouldI.GetOwnedMarketableItemIds.v1`
-- `ShouldI.GetCurrentListingItemIds.v1`
+- `ShouldI.ExternalMarketData.GetOwnedMarketableItemIds.v1`
+- `ShouldI.ExternalMarketData.GetCurrentListingItemIds.v1`
 
 The direction matters: **Should I? provides IDs and consumes completed data; it does not instruct Deep Mine to begin a scan.**
 

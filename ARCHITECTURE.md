@@ -16,6 +16,6 @@
 3. Queue requests one item at a time through the native ItemSearch proxy.
 4. Dalamud MarketBoard events are captured.
 5. Completed item snapshots are cached locally.
-6. Snapshot is published to Should I through `ShouldIDeepMine.SnapshotUpdated.v1`.
+6. Snapshot is published to Should I through `ShouldI.ExternalMarketData.SnapshotUpdated.v1`.
 
 There is no shared database file and no cross-plugin file mutation. Each plugin owns its own storage; IPC is the integration boundary.
