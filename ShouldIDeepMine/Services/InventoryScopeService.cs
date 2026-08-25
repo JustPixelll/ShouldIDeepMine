@@ -11,6 +11,7 @@ public sealed unsafe class InventoryScopeService
 {
     public const string ShouldIOwnedIdsChannel = "ShouldI.ExternalMarketData.GetOwnedMarketableItemIds.v1";
     public const string ShouldIListingIdsChannel = "ShouldI.ExternalMarketData.GetCurrentListingItemIds.v1";
+    public const string ShouldISmartCandidatesChannel = "ShouldI.ExternalMarketData.GetSmartCandidates.v1";
 
     private static readonly InventoryType[] PlayerInventory =
     [
@@ -43,6 +44,7 @@ public sealed unsafe class InventoryScopeService
     private readonly IPluginLog log;
     private readonly ICallGateSubscriber<string> ownedSubscriber;
     private readonly ICallGateSubscriber<string> listingSubscriber;
+    private readonly ICallGateSubscriber<string> smartCandidateSubscriber;
 
     public InventoryScopeService(IDalamudPluginInterface pluginInterface, GameItemCatalog catalog, IPluginLog log)
     {
@@ -50,15 +52,66 @@ public sealed unsafe class InventoryScopeService
         this.log = log;
         ownedSubscriber = pluginInterface.GetIpcSubscriber<string>(ShouldIOwnedIdsChannel);
         listingSubscriber = pluginInterface.GetIpcSubscriber<string>(ShouldIListingIdsChannel);
+        smartCandidateSubscriber = pluginInterface.GetIpcSubscriber<string>(ShouldISmartCandidatesChannel);
     }
 
     public bool ShouldIAvailable { get; private set; }
+    public bool SmartCandidatesAvailable { get; private set; }
 
     public IReadOnlyList<uint> GetShouldIKnownOwned()
         => TryGetShouldIIds(ownedSubscriber, out var ids) ? ids : GetAllLoaded();
 
     public IReadOnlyList<uint> GetShouldIKnownListings()
         => TryGetShouldIIds(listingSubscriber, out var ids) ? ids : GetActiveRetainerListings();
+
+    public IReadOnlyList<SmartCandidateDto> GetSmartCandidates(DeepMineSmartModule module)
+    {
+        try
+        {
+            var json = smartCandidateSubscriber.InvokeFunc();
+            var parsed = JsonSerializer.Deserialize<List<SmartCandidateDto>>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            }) ?? new List<SmartCandidateDto>();
+
+            var wanted = module == DeepMineSmartModule.Total ? null : ModuleName(module);
+            var output = parsed
+                .Where(x => x.ItemId != 0 && catalog.IsMarketable(x.ItemId))
+                .Where(x => wanted is null || x.Module.Equals(wanted, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.Priority)
+                .ThenByDescending(x => x.OpportunityScore ?? 0)
+                .ToList();
+            ShouldIAvailable = true;
+            SmartCandidatesAvailable = true;
+            return output;
+        }
+        catch (IpcNotReadyError)
+        {
+            SmartCandidatesAvailable = false;
+        }
+        catch (Exception ex)
+        {
+            SmartCandidatesAvailable = false;
+            log.Debug(ex, "Could not read smart Should I? candidates over IPC.");
+        }
+
+        if (module is DeepMineSmartModule.Total or DeepMineSmartModule.Sell)
+        {
+            return GetShouldIKnownOwned()
+                .Select((id, index) => new SmartCandidateDto(
+                    "Sell",
+                    id,
+                    catalog.GetName(id),
+                    Math.Max(1, 500 - index),
+                    "Fallback owned-item scope; update Should I? for richer smart candidate hints.",
+                    null,
+                    null,
+                    null))
+                .ToList();
+        }
+
+        return Array.Empty<SmartCandidateDto>();
+    }
 
     public IReadOnlyList<uint> GetPlayerInventory(bool includeSaddlebags)
     {
@@ -105,6 +158,16 @@ public sealed unsafe class InventoryScopeService
         ids = Array.Empty<uint>();
         return false;
     }
+
+    private static string ModuleName(DeepMineSmartModule module) => module switch
+    {
+        DeepMineSmartModule.Sell => "Sell",
+        DeepMineSmartModule.BuyMB => "BuyMB",
+        DeepMineSmartModule.BuyVendor => "BuyVendor",
+        DeepMineSmartModule.Craft => "Craft",
+        DeepMineSmartModule.Gather => "Gather",
+        _ => string.Empty,
+    };
 
     private HashSet<uint> ReadContainers(IEnumerable<InventoryType> types)
     {
