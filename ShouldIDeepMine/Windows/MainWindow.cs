@@ -273,14 +273,15 @@ public sealed class MainWindow : Window
                 ImGui.TextWrapped("Entire marketable FFXIV item catalog. This can be an extremely large native request queue and is intentionally never started automatically or by a smart scan.");
                 ImGui.Text($"Current catalog scope: {all.Count:N0} marketable item IDs.");
                 ImGui.Checkbox("I understand this is a very large explicit scan", ref fullMarketConfirmed);
-                if (plugin.Engine.IsRunning || !fullMarketConfirmed)
+                var disabled = plugin.Engine.IsRunning || !fullMarketConfirmed;
+                if (disabled)
                     ImGui.BeginDisabled();
                 if (ImGui.Button("START FULL MARKET CATALOG SCAN"))
                 {
                     plugin.Engine.Start(all, "entire marketable FFXIV item catalog");
                     fullMarketConfirmed = false;
                 }
-                if (plugin.Engine.IsRunning || !fullMarketConfirmed)
+                if (disabled)
                     ImGui.EndDisabled();
                 ImGui.EndTabItem();
             }
@@ -471,14 +472,15 @@ public sealed class MainWindow : Window
 
     private void ScopeButton(string label, Func<IReadOnlyList<uint>> getIds, string scope)
     {
-        if (plugin.Engine.IsRunning)
+        var disabled = plugin.Engine.IsRunning;
+        if (disabled)
             ImGui.BeginDisabled();
         if (ImGui.Button(label))
         {
             var ids = getIds();
             plugin.Engine.Start(ids, scope);
         }
-        if (plugin.Engine.IsRunning)
+        if (disabled)
             ImGui.EndDisabled();
     }
 
@@ -502,14 +504,15 @@ public sealed class MainWindow : Window
             ImGui.EndCombo();
         }
         ImGui.SameLine();
-        if (plugin.Engine.IsRunning || selectedCategory == 0)
+        var disabled = plugin.Engine.IsRunning || selectedCategory == 0;
+        if (disabled)
             ImGui.BeginDisabled();
         if (ImGui.Button("SCAN CATEGORY"))
         {
             var ids = plugin.Catalog.GetMarketableItemIdsForCategory(selectedCategory, plugin.Configuration.CategoryItemLimit);
             plugin.Engine.Start(ids, $"category: {current?.Name ?? selectedCategory.ToString()}");
         }
-        if (plugin.Engine.IsRunning || selectedCategory == 0)
+        if (disabled)
             ImGui.EndDisabled();
         ImGui.TextDisabled($"Category scans are capped at {plugin.Configuration.CategoryItemLimit:N0} items per run; change the cap in Settings.");
     }
@@ -521,11 +524,12 @@ public sealed class MainWindow : Window
         ImGui.InputTextWithHint("##custom-ids", "Comma/space/newline-separated item IDs", ref customIds, 8192);
         var ids = ParseIds(customIds);
         ImGui.TextDisabled($"{ids.Count:N0} valid marketable unique item(s).");
-        if (plugin.Engine.IsRunning || ids.Count == 0)
+        var disabled = plugin.Engine.IsRunning || ids.Count == 0;
+        if (disabled)
             ImGui.BeginDisabled();
         if (ImGui.Button("SCAN CUSTOM IDS"))
             plugin.Engine.Start(ids, "custom item IDs");
-        if (plugin.Engine.IsRunning || ids.Count == 0)
+        if (disabled)
             ImGui.EndDisabled();
     }
 
