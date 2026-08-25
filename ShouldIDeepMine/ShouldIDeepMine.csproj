@@ -1,10 +1,10 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.2.1.0</Version>
+    <Version>0.3.0.0</Version>
     <Author>JustPixelll</Author>
     <Name>Should I Deep Mine?</Name>
-    <Punchline>Explicit deep Market Board scans for Should I?</Punchline>
-    <Description>Experimental companion for Should I?. Run user-started, explicitly scoped native Market Board deep scans, keep a local snapshot cache, and publish fresh market snapshots to Should I? through Dalamud IPC. Nothing scans automatically when the plugin loads.</Description>
+    <Punchline>Smart native Market Board evidence for Should I?</Punchline>
+    <Description>Experimental native Market Board evidence workstation for Should I?. Build module-aware smart verification plans, run explicit full scopes, refresh stale data, maintain reusable update lists, cache completed snapshots locally, and publish them to Should I? through Dalamud IPC. Nothing scans automatically when the plugin loads.</Description>
     <PackageProjectUrl>https://github.com/JustPixelll/ShouldIDeepMine</PackageProjectUrl>
     <RepoUrl>https://github.com/JustPixelll/ShouldIDeepMine</RepoUrl>
     <IconUrl>https://raw.githubusercontent.com/JustPixelll/ShouldIDeepMine/main/images/icon.png</IconUrl>

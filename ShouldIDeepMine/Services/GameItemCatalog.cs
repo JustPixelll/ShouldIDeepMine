@@ -8,6 +8,7 @@ public sealed class GameItemCatalog
     private readonly IDataManager data;
     private IReadOnlyList<CategoryInfo>? categories;
     private Dictionary<uint, List<uint>>? categoryItems;
+    private IReadOnlyList<uint>? allMarketableItemIds;
 
     public GameItemCatalog(IDataManager data) => this.data = data;
 
@@ -37,6 +38,20 @@ public sealed class GameItemCatalog
         if (!categoryItems!.TryGetValue(categoryId, out var ids))
             return Array.Empty<uint>();
         return ids.Take(Math.Clamp(limit, 1, 5000)).ToList();
+    }
+
+    public IReadOnlyList<uint> GetAllMarketableItemIds()
+    {
+        if (allMarketableItemIds is not null)
+            return allMarketableItemIds;
+
+        allMarketableItemIds = data.GetExcelSheet<Item>()
+            .Where(x => x.RowId != 0 && x.ItemSearchCategory.RowId > 0)
+            .Select(x => x.RowId)
+            .Distinct()
+            .Order()
+            .ToList();
+        return allMarketableItemIds;
     }
 
     private void EnsureCategoryIndex()

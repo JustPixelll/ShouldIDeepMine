@@ -11,6 +11,7 @@ public sealed class MarketBoardObserver : IDisposable
     private readonly IPlayerState playerState;
     private readonly Dictionary<(uint WorldId, uint ItemId), DeepMineSnapshotDto> working = new();
     private uint lastHistoryItemId;
+    private uint expectedItemId;
 
     public MarketBoardObserver(IMarketBoard marketBoard, IPlayerState playerState)
     {
@@ -21,6 +22,8 @@ public sealed class MarketBoardObserver : IDisposable
     }
 
     public event Action<uint, DeepMinePacketKind>? PacketObserved;
+
+    public void Expect(uint itemId) => expectedItemId = itemId;
 
     public DeepMineSnapshotDto? GetSnapshot(uint worldId, uint itemId)
         => working.TryGetValue((worldId, itemId), out var snapshot)
@@ -40,6 +43,7 @@ public sealed class MarketBoardObserver : IDisposable
         var worldId = playerState.CurrentWorld.RowId;
         var now = DateTimeOffset.UtcNow;
         lastHistoryItemId = history.ItemId;
+        expectedItemId = history.ItemId;
         working[(worldId, history.ItemId)] = new DeepMineSnapshotDto(
             worldId,
             history.ItemId,
@@ -59,7 +63,7 @@ public sealed class MarketBoardObserver : IDisposable
         if (!playerState.IsLoaded)
             return;
         var rows = offerings.ItemListings;
-        var itemId = rows.Count > 0 ? rows[0].ItemId : lastHistoryItemId;
+        var itemId = rows.Count > 0 ? rows[0].ItemId : expectedItemId != 0 ? expectedItemId : lastHistoryItemId;
         if (itemId == 0)
             return;
         var worldId = playerState.CurrentWorld.RowId;

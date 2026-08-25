@@ -18,6 +18,7 @@ public sealed unsafe class DeepScanEngine : IDisposable
     private DateTimeOffset lastPacketAt;
     private DateTimeOffset nextRequestAt;
     private bool currentHasHistory;
+    private bool currentHasOfferings;
 
     public DeepScanEngine(Configuration configuration, IFramework framework, IPlayerState playerState,
         GameItemCatalog catalog, MarketBoardObserver observer, DeepMinePublisher publisher, IPluginLog log)
@@ -41,21 +42,33 @@ public sealed unsafe class DeepScanEngine : IDisposable
     public int Remaining => queue.Count + (current is null ? 0 : 1);
     public DeepMineQueueItem? Current => current;
     public bool IsRunning => State is DeepMineState.WaitingToRequest or DeepMineState.WaitingForPackets or DeepMineState.Cooldown;
+    public DateTimeOffset? StartedAtUtc { get; private set; }
+    public DateTimeOffset? LastCompletedAtUtc { get; private set; }
+    public string LastScope { get; private set; } = string.Empty;
 
     public void Start(IEnumerable<uint> itemIds, string label)
+        => Start(itemIds.Select(id => new DeepMineQueueItem(id, catalog.GetName(id))), label);
+
+    public void Start(IEnumerable<DeepMineQueueItem> items, string label)
     {
         if (IsRunning || !playerState.IsLoaded)
             return;
+
         queue.Clear();
         current = null;
         CompletedCount = 0;
         FailedCount = 0;
+        LastScope = label;
 
-        foreach (var itemId in itemIds.Where(x => x != 0).Distinct())
-        {
-            if (catalog.IsMarketable(itemId))
-                queue.Enqueue(new DeepMineQueueItem(itemId, catalog.GetName(itemId)));
-        }
+        var distinct = items
+            .Where(x => x.ItemId != 0 && catalog.IsMarketable(x.ItemId))
+            .GroupBy(x => x.ItemId)
+            .Select(g => g.OrderByDescending(x => x.Priority).First())
+            .ToList();
+
+        foreach (var item in distinct)
+            queue.Enqueue(item with { ItemName = string.IsNullOrWhiteSpace(item.ItemName) ? catalog.GetName(item.ItemId) : item.ItemName, Attempts = 0 });
+
         InitialCount = queue.Count;
         if (InitialCount == 0)
         {
@@ -63,6 +76,9 @@ public sealed unsafe class DeepScanEngine : IDisposable
             Status = $"No marketable items found for {label}.";
             return;
         }
+
+        StartedAtUtc = DateTimeOffset.UtcNow;
+        LastCompletedAtUtc = null;
         State = DeepMineState.WaitingToRequest;
         nextRequestAt = DateTimeOffset.UtcNow;
         stateSince = nextRequestAt;
@@ -92,6 +108,7 @@ public sealed unsafe class DeepScanEngine : IDisposable
             Stop("Stopped: player state unloaded.");
             return;
         }
+
         var now = DateTimeOffset.UtcNow;
         switch (State)
         {
@@ -103,6 +120,7 @@ public sealed unsafe class DeepScanEngine : IDisposable
                     if (queue.Count == 0)
                     {
                         State = DeepMineState.Completed;
+                        LastCompletedAtUtc = now;
                         Status = $"Done. {CompletedCount:N0} refreshed, {FailedCount:N0} failed.";
                         return;
                     }
@@ -110,8 +128,9 @@ public sealed unsafe class DeepScanEngine : IDisposable
                 }
                 SendCurrent(now);
                 break;
+
             case DeepMineState.WaitingForPackets:
-                if (currentHasHistory && now - lastPacketAt >= TimeSpan.FromMilliseconds(850))
+                if (currentHasHistory && currentHasOfferings && now - lastPacketAt >= TimeSpan.FromMilliseconds(650))
                 {
                     var snapshot = observer.GetSnapshot(playerState.CurrentWorld.RowId, current!.ItemId);
                     if (snapshot is not null)
@@ -120,12 +139,14 @@ public sealed unsafe class DeepScanEngine : IDisposable
                     Status = $"Refreshed {current.ItemName}. {Remaining - 1:N0} remaining.";
                     current = null;
                     State = DeepMineState.Cooldown;
-                    nextRequestAt = now.AddMilliseconds(Math.Max(1000, configuration.RequestSpacingMs));
+                    nextRequestAt = now.AddMilliseconds(Math.Max(1500, configuration.RequestSpacingMs));
                     return;
                 }
+
                 if (now - stateSince >= TimeSpan.FromMilliseconds(Math.Max(4000, configuration.RequestTimeoutMs)))
                     HandleTimeout(now);
                 break;
+
             case DeepMineState.Cooldown:
                 if (now >= nextRequestAt)
                     State = DeepMineState.WaitingToRequest;
@@ -137,6 +158,7 @@ public sealed unsafe class DeepScanEngine : IDisposable
     {
         if (current is null)
             return;
+
         try
         {
             var proxy = InfoProxyItemSearch.Instance();
@@ -146,17 +168,21 @@ public sealed unsafe class DeepScanEngine : IDisposable
                 nextRequestAt = now.AddSeconds(1);
                 return;
             }
+
             current = current with { Attempts = current.Attempts + 1 };
             currentHasHistory = false;
+            currentHasOfferings = false;
             lastPacketAt = now;
+            observer.Expect(current.ItemId);
             proxy->EntryCount = 0;
             proxy->SearchItemId = current.ItemId;
             if (!proxy->RequestData())
             {
-                Status = $"Client refused request for {current.ItemName}; retrying.";
+                Status = $"Client refused request for {current.ItemName}; backing off.";
                 HandleTimeout(now);
                 return;
             }
+
             State = DeepMineState.WaitingForPackets;
             stateSince = now;
             Status = $"Requesting {current.ItemName} ({CompletedCount + FailedCount + 1:N0}/{InitialCount:N0}), attempt {current.Attempts:N0}.";
@@ -172,26 +198,32 @@ public sealed unsafe class DeepScanEngine : IDisposable
     {
         if (State != DeepMineState.WaitingForPackets || current is null || current.ItemId != itemId)
             return;
+
         lastPacketAt = DateTimeOffset.UtcNow;
         if (kind == DeepMinePacketKind.History)
             currentHasHistory = true;
+        if (kind == DeepMinePacketKind.Offerings)
+            currentHasOfferings = true;
     }
 
     private void HandleTimeout(DateTimeOffset now)
     {
         if (current is null)
             return;
+
         if (current.Attempts < Math.Max(1, configuration.MaxRetries))
         {
             State = DeepMineState.Cooldown;
-            nextRequestAt = now.AddMilliseconds(Math.Max(2000, configuration.RequestSpacingMs));
-            Status = $"No complete response for {current.ItemName}; retry {current.Attempts + 1:N0}/{configuration.MaxRetries:N0}.";
+            var backoffMs = Math.Max(3000, configuration.RequestSpacingMs * (current.Attempts + 1));
+            nextRequestAt = now.AddMilliseconds(backoffMs);
+            Status = $"No complete response for {current.ItemName}; retry {current.Attempts + 1:N0}/{configuration.MaxRetries:N0} after backoff.";
             return;
         }
+
         FailedCount++;
         Status = $"Skipped {current.ItemName} after {current.Attempts:N0} failed attempt(s).";
         current = null;
         State = DeepMineState.Cooldown;
-        nextRequestAt = now.AddMilliseconds(Math.Max(2000, configuration.RequestSpacingMs));
+        nextRequestAt = now.AddMilliseconds(Math.Max(4000, configuration.RequestSpacingMs * 2));
     }
 }

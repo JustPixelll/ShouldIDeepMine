@@ -25,6 +25,7 @@ public sealed class Plugin : IDalamudPlugin
     public InventoryScopeService Scopes { get; }
     public DeepMinePublisher Publisher { get; }
     public MarketBoardObserver Observer { get; }
+    public SmartScanPlanner Planner { get; }
     public DeepScanEngine Engine { get; }
     public readonly WindowSystem WindowSystem = new("ShouldIDeepMine");
     private readonly MainWindow window;
@@ -36,13 +37,14 @@ public sealed class Plugin : IDalamudPlugin
         Scopes = new InventoryScopeService(PluginInterface, Catalog, Log);
         Publisher = new DeepMinePublisher(PluginInterface, Log);
         Observer = new MarketBoardObserver(MarketBoard, PlayerState);
+        Planner = new SmartScanPlanner(Configuration, PlayerState, Scopes, Catalog, Publisher);
         Engine = new DeepScanEngine(Configuration, Framework, PlayerState, Catalog, Observer, Publisher, Log);
         window = new MainWindow(this);
         WindowSystem.AddWindow(window);
 
         CommandManager.AddHandler(Command, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open Should I Deep Mine?. Scopes: all, listings, inventory, saddlebags, retainer, retainerlistings, loaded, category <id/name>, items <ids>, stop, status, help.",
+            HelpMessage = "Open Should I Deep Mine?. Smart: smart [total|sell|buymb|buyvendor|craft|gather]. Full scopes: all, listings, inventory, saddlebags, retainer, retainerlistings, loaded, category <id/name>, items <ids>. Other: stop, status, help.",
         });
         PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += Open;
@@ -76,6 +78,10 @@ public sealed class Plugin : IDalamudPlugin
 
         switch (verb)
         {
+            case "smart":
+            case "verify":
+                StartSmart(remainder);
+                return;
             case "all":
             case "owned":
                 Start(Scopes.GetShouldIKnownOwned(), "Should I known owned items");
@@ -132,6 +138,38 @@ public sealed class Plugin : IDalamudPlugin
                 ChatGui.PrintError($"[Should I Deep Mine?] Unknown command '{verb}'. Use /deepmine help.");
                 return;
         }
+    }
+
+    private void StartSmart(string input)
+    {
+        var module = input.Trim().ToLowerInvariant() switch
+        {
+            "" or "total" or "all" => DeepMineSmartModule.Total,
+            "sell" => DeepMineSmartModule.Sell,
+            "buymb" or "buy" or "market" => DeepMineSmartModule.BuyMB,
+            "buyvendor" or "vendor" => DeepMineSmartModule.BuyVendor,
+            "craft" or "crafter" => DeepMineSmartModule.Craft,
+            "gather" or "gatherer" => DeepMineSmartModule.Gather,
+            _ => (DeepMineSmartModule?)null,
+        };
+
+        if (module is null)
+        {
+            ChatGui.PrintError("[Should I Deep Mine?] Usage: /deepmine smart [total|sell|buymb|buyvendor|craft|gather]");
+            return;
+        }
+
+        var plan = Planner.BuildSmart(module.Value);
+        if (plan.Items.Count == 0)
+        {
+            ChatGui.Print($"[Should I Deep Mine?] Smart {module.Value}: nothing needs native verification within the current freshness/budget settings.");
+            window.IsOpen = true;
+            return;
+        }
+
+        Engine.Start(plan.Items, plan.Label);
+        window.IsOpen = true;
+        ChatGui.Print($"[Should I Deep Mine?] Started {plan.Label}: {plan.Items.Count:N0} request(s), {plan.FreshSkippedCount:N0} recent native snapshot(s) skipped.");
     }
 
     private void Start(IReadOnlyList<uint> ids, string scope)
@@ -202,6 +240,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private static void PrintHelp()
     {
+        ChatGui.Print("[Should I Deep Mine?] /deepmine smart [total|sell|buymb|buyvendor|craft|gather] — build a small Should I?-guided verification plan");
         ChatGui.Print("[Should I Deep Mine?] /deepmine all — all marketable items Should I? currently knows you own");
         ChatGui.Print("[Should I Deep Mine?] /deepmine listings — items Should I? currently knows you have listed");
         ChatGui.Print("[Should I Deep Mine?] /deepmine inventory — loaded player inventory only");
