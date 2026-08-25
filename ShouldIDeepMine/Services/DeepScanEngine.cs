@@ -173,6 +173,7 @@ public sealed unsafe class DeepScanEngine : IDisposable
             currentHasHistory = false;
             currentHasOfferings = false;
             lastPacketAt = now;
+            observer.Expect(current.ItemId);
             proxy->EntryCount = 0;
             proxy->SearchItemId = current.ItemId;
             if (!proxy->RequestData())
