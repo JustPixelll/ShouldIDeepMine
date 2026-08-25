@@ -33,6 +33,21 @@ public sealed class DeepMinePublisher : IDisposable
     public DeepMineSnapshotDto? Get(uint worldId, uint itemId)
         => snapshots.TryGetValue(Key(worldId, itemId), out var snapshot) ? snapshot : null;
 
+    public IReadOnlyList<DeepMineSnapshotDto> GetAll(uint worldId = 0)
+        => snapshots.Values
+            .Where(x => worldId == 0 || x.WorldId == worldId)
+            .OrderByDescending(x => ObservedAt(x))
+            .ToList();
+
+    public DateTimeOffset? GetObservedAt(uint worldId, uint itemId)
+        => Get(worldId, itemId) is { } snapshot ? ObservedAt(snapshot) : null;
+
+    public bool IsFresh(uint worldId, uint itemId, TimeSpan maximumAge)
+    {
+        var observed = GetObservedAt(worldId, itemId);
+        return observed is not null && DateTimeOffset.UtcNow - observed.Value <= maximumAge;
+    }
+
     public void Publish(DeepMineSnapshotDto snapshot)
     {
         if (snapshot.WorldId == 0 || snapshot.ItemId == 0)
@@ -68,13 +83,16 @@ public sealed class DeepMinePublisher : IDisposable
     {
         try
         {
-            File.WriteAllText(path, JsonSerializer.Serialize(snapshots.Values.OrderByDescending(x => x.ListingObservedAtUtc).ToList(), JsonOptions));
+            File.WriteAllText(path, JsonSerializer.Serialize(snapshots.Values.OrderByDescending(ObservedAt).ToList(), JsonOptions));
         }
         catch (Exception ex)
         {
             log.Warning(ex, "Could not save Deep Mine cache.");
         }
     }
+
+    private static DateTimeOffset ObservedAt(DeepMineSnapshotDto snapshot)
+        => snapshot.ListingObservedAtUtc ?? snapshot.HistoryObservedAtUtc ?? DateTimeOffset.MinValue;
 
     private static string Key(uint worldId, uint itemId) => $"{worldId}:{itemId}";
 }
